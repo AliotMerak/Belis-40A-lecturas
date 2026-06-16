@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoreo Compresor No.1</title>
-    <!-- Cargamos la librería Chart.js desde un servidor CDN confiable -->
+    <!-- Importación estable de Chart.js -->
     <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
@@ -45,7 +45,7 @@
 
     <div class="grafica-container">
         <label for="parametroSeleccionado">Ver Historial de 4 Horas: </label>
-        <select id="parametroSeleccionado" onchange="actualizarGrafica(true)">
+        <select id="parametroSeleccionado" onchange="actualizarGrafica()">
             <option value="temp3ra">Temperatura 3ra Etapa</option>
             <option value="temp1ra">Temperatura 1ra Etapa</option>
             <option value="temp2da">Temperatura 2da Etapa</option>
@@ -54,10 +54,8 @@
             <option value="presionAceite">Presión de Aceite</option>
         </select>
         
-        <!-- Texto de advertencia visible en la página para el usuario -->
         <div id="mensajeGrafica">Esperando datos del ESP32 para trazar la gráfica lineal...</div>
         
-        <!-- Canvas para dibujar el gráfico -->
         <div style="position: relative; height:300px; width:100%">
             <canvas id="miGrafica"></canvas>
         </div>
@@ -68,7 +66,7 @@
     <script>
         let miChart = null;
 
-        // 1. INICIALIZAR LA GRÁFICA EN BLANCO UNA SOLA VEZ AL CARGAR LA PÁGINA
+        // 1. INICIALIZAR LA GRÁFICA EN BLANCO
         function inicializarGrafica() {
             const ctx = document.getElementById('miGrafica').getContext('2d');
             miChart = new Chart(ctx, {
@@ -76,12 +74,12 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Cargando parámetro...',
+                        label: 'Muestras',
                         data: [],
                         borderColor: '#f1c40f',
                         backgroundColor: 'rgba(241, 196, 15, 0.1)',
                         borderWidth: 2,
-                        pointRadius: 1,
+                        pointRadius: 2,
                         fill: true,
                         tension: 0.1
                     }]
@@ -98,11 +96,13 @@
             });
         }
 
-        // 2. ACTUALIZAR LOS VALORES NUMÉRICOS SUPERIORES
+        // 2. ACTUALIZAR LAS CAJAS NUMÉRICAS SUPERIORES
         function actualizarPanel() {
             fetch('/api/datos')
                 .then(res => res.json())
                 .then(data => {
+                    if(!data || data.fecha.includes("Esperando")) return;
+
                     document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
                     document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
                     document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°C</span>';
@@ -112,7 +112,6 @@
                     document.getElementById('fecha').innerText = data.fecha;
 
                     let alertaActiva = false;
-                    
                     if(Number(data.temp3ra) > 140) {
                         document.getElementById('c-temp3ra').style.backgroundColor = '#78281f';
                         alertaActiva = true;
@@ -125,50 +124,42 @@
 
                     document.getElementById('bannerAlerta').style.display = alertaActiva ? 'block' : 'none';
                 })
-                .catch(err => console.error("Error cargando datos instantáneos:", err));
+                .catch(err => console.error("Error en panel:", err));
         }
 
-        // 3. INYECTAR DATOS HISTÓRICOS A LA GRÁFICA EN SEGUNDO PLANO
-        function actualizarGrafica(esCambioManual = false) {
+        // 3. INYECTAR HISTORIAL A LA GRÁFICA CORREGIDA
+        function actualizarGrafica() {
             const parametro = document.getElementById('parametroSeleccionado').value;
             const comboTexto = document.getElementById('parametroSeleccionado').options[document.getElementById('parametroSeleccionado').selectedIndex].text;
 
             fetch('/api/historial')
                 .then(res => res.json())
                 .then(historial => {
-                    // Ocultar o mostrar el letrero dependiendo de si hay suficiente historial (mínimo 2 puntos)
                     if (!historial || historial.length < 2) {
                         document.getElementById('mensajeGrafica').style.display = 'block';
                         document.getElementById('mensajeGrafica').innerText = "Recopilando muestras del ESP32... (" + (historial ? historial.length : 0) + "/2 recibidas)";
                         return;
                     }
                     
-                    // Si ya hay datos, ocultamos el mensaje de espera
                     document.getElementById('mensajeGrafica').style.display = 'none';
 
-                    // Extraer los arreglos de tiempos y de valores
                     const etiquetasHoras = historial.map(d => d.fecha);
                     const valoresY = historial.map(d => Number(d[parametro]));
 
-                    // Actualizar el objeto Chart existente en lugar de destruirlo
+                    // CORRECCIÓN: datasets[0] asigna las variables de forma correcta en la matriz
                     miChart.data.labels = etiquetasHoras;
                     miChart.data.datasets[0].label = comboTexto;
                     miChart.data.datasets[0].data = valoresY;
                     
-                    // Refrescar visualmente la pantalla sin parpadeos
-                    miChart.update('none'); 
+                    miChart.update(); 
                 })
-                .catch(err => console.error("Error cargando historial de la API:", err));
+                .catch(err => console.error("Error en gráfica:", err));
         }
 
-        // --- ARRANQUE AUTOMÁTICO AL INSTANTE ---
+        // Arranque inicial ordenado
         inicializarGrafica();
-        actualizarPanel();
-        setTimeout(() => actualizarGrafica(false), 1500);
-
-        // --- INTERVALOS DE REFRESCO PERMANENTE ---
-        setInterval(actualizarPanel, 3000);      // Cada 3 segundos actualiza números superiores
-        setInterval(actualizarGrafica, 10000);   // Cada 10 segundos refresca la línea del gráfico
+        setInterval(actualizarPanel, 3000);
+        setInterval(actualizarGrafica, 5000);
     </script>
 </body>
 </html>
