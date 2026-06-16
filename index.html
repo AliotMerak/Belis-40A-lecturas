@@ -3,76 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoreo Compresor No.2</title>
+    <title>Monitoreo Compresor No.1</title>
+    <!-- Importar librería de gráficas Chart.js -->
+    <script src="https://jsdelivr.net"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
-        h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .sub { color: #bdc3c7; font-size: 16px; margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: #2c3e50; padding: 20px; border-radius: 8px; border-left: 5px solid #3498db; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; }
-        .card.pressure { border-left-color: #2ecc71; }
-        h3 { margin: 0; font-size: 14px; color: #95a5a6; text-transform: uppercase; }
-        .valor { font-size: 32px; font-weight: bold; margin-top: 10px; color: #fff; }
-        .unidad { font-size: 18px; color: #bdc3c7; font-weight: normal; }
-        .actualizado { margin-top: 40px; color: #7f8c8d; font-size: 14px; }
+        h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; }
+        .sub { color: #bdc3c7; font-size: 16px; margin-bottom: 25px; }
+        
+        /* Sistema de Alertas Visuales */
+        #bannerAlerta { display: none; background-color: #e74c3c; color: white; padding: 15px; font-weight: bold; border-radius: 5px; margin-bottom: 20px; animation: parpadeo 1.5s infinite; }
+        @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .card { background: #2c3e50; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; text-align: left; }
+        .card.critica { border-left-color: #e74c3c; }
+        h3 { margin: 0; font-size: 13px; color: #95a5a6; text-transform: uppercase; }
+        .valor { font-size: 28px; font-weight: bold; margin-top: 5px; }
+        .unidad { font-size: 16px; color: #bdc3c7; }
+        
+        /* Sección Gráfica */
+        .grafica-container { max-width: 1200px; margin: 30px auto; background: #2c3e50; padding: 20px; border-radius: 8px; }
+        select { background: #1e222b; color: white; padding: 8px; border-radius: 5px; border: 1px solid #3498db; margin-bottom: 15px; font-size: 14px; }
+        
+        .actualizado { color: #7f8c8d; font-size: 13px; }
     </style>
 </head>
 <body>
 
-    <h1>Parametros de Operacion de Compresor Bellis 40A</h1>
-    <div class="sub">Sistema de Telemetría Industrial en Tiempo Real by Aliot Merak</div>
+    <h1>Parametros de Operacion de Compresor No.1</h1>
+    <div class="sub">Telemetría con Historial de 4 Horas y Sistema de Alertas</div>
+
+    <!-- Banner de Alerta Crítica -->
+    <div id="bannerAlerta">⚠️ ATENCIÓN: VALORES OPERATIVOS FUERA DE RANGO CRÍTICO</div>
 
     <div class="grid">
-        <div class="card">
-            <h3>Temp. 1ra Etapa</h3>
-            <div class="valor" id="temp1ra">-- <span class="unidad">°F</span></div>
-        </div>
-        <div class="card">
-            <h3>Temp. 2da Etapa</h3>
-            <div class="valor" id="temp2da">-- <span class="unidad">°F</span></div>
-        </div>
-        <div class="card">
-            <h3>Temp. 3ra Etapa</h3>
-            <div class="card-content">
-                <div class="valor" id="temp3ra">-- <span class="unidad">°F</span></div>
-            </div>
-        </div>
-        <div class="card">
-            <h3>Temp. Agua Enfriamiento</h3>
-            <div class="valor" id="tempAgua">-- <span class="unidad">°F</span></div>
-        </div>
-        <div class="card">
-            <h3>Temp. Aceite</h3>
-            <div class="valor" id="tempAceite">-- <span class="unidad">°F</span></div>
-        </div>
-        <div class="card pressure">
-            <h3>Presión de Aceite</h3>
-            <div class="valor" id="presionAceite">-- <span class="unidad">BAR</span></div>
-        </div>
-        
-        <!-- [AQUÍ PUEDES COPIAR Y PEGAR MÁS BLOQUES CARD EN EL FUTURO] -->
+        <div class="card" id="c-temp1ra"><h3>Temp. 1ra Etapa</h3><div class="valor" id="temp1ra">-- <span class="unidad">°C</span></div></div>
+        <div class="card" id="c-temp2da"><h3>Temp. 2da Etapa</h3><div class="valor" id="temp2da">-- <span class="unidad">°C</span></div></div>
+        <div class="card" id="c-temp3ra"><h3>Temp. 3ra Etapa</h3><div class="valor" id="temp3ra">-- <span class="unidad">°C</span></div></div>
+        <div class="card" id="c-tempAgua"><h3>Temp. Agua Enfr.</h3><div class="valor" id="tempAgua">-- <span class="unidad">°C</span></div></div>
+        <div class="card" id="c-tempAceite"><h3>Temp. Aceite</h3><div class="valor" id="tempAceite">-- <span class="unidad">°C</span></div></div>
+        <div class="card" id="c-presionAceite"><h3>Presión Aceite</h3><div class="valor" id="presionAceite">-- <span class="unidad">PSI</span></div></div>
     </div>
 
-    <p class="actualizado">Último reporte de estado: <span id="fecha">--</span></p>
+    <!-- Contenedor del Histórico de 4 Horas -->
+    <div class="grafica-container">
+        <label for="parametroSeleccionado">Ver Historial de 4 Horas: </label>
+        <select id="parametroSeleccionado" onchange="renderizarGrafica()">
+            <option value="temp3ra">Temperatura 3ra Etapa</option>
+            <option value="temp1ra">Temperatura 1ra Etapa</option>
+            <option value="temp2da">Temperatura 2da Etapa</option>
+            <option value="tempAgua">Temperatura Agua Enfr.</option>
+            <option value="tempAceite">Temperatura Aceite</option>
+            <option value="presionAceite">Presión de Aceite</option>
+        </select>
+        <canvas id="miGrafica" height="100"></canvas>
+    </div>
+
+    <p class="actualizado">Último reporte: <span id="fecha">--</span></p>
 
     <script>
+        let miChart = null;
+
         function actualizarPanel() {
             fetch('/api/datos')
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°F</span>';
-                    document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°F</span>';
-                    document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°F</span>';
-                    document.getElementById('tempAgua').innerHTML = data.tempAgua + ' <span class="unidad">°F</span>';
-                    document.getElementById('tempAceite').innerHTML = data.tempAceite + ' <span class="unidad">°F</span>';
-                    document.getElementById('presionAceite').innerHTML = data.presionAceite + ' <span class="unidad">BAR</span>';
+                    document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
+                    document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
+                    document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°C</span>';
+                    document.getElementById('tempAgua').innerHTML = data.tempAgua + ' <span class="unidad">°C</span>';
+                    document.getElementById('tempAceite').innerHTML = data.tempAceite + ' <span class="unidad">°C</span>';
+                    document.getElementById('presionAceite').innerHTML = data.presionAceite + ' <span class="unidad">PSI</span>';
                     document.getElementById('fecha').innerText = data.fecha;
-                })
-                .catch(err => console.error("Error de actualización:", err));
+
+                    // CONTROL DE ALERTAS VISUALES EN LAS TARJETAS (Cambio a Rojo)
+                    let alertaActiva = false;
+                    
+                    if(data.temp3ra > 140) {
+                        document.getElementById('c-temp3ra').style.backgroundColor = '#78281f';
+                        alertaActiva = true;
+                    } else { document.getElementById('c-temp3ra').style.backgroundColor = '#2c3e50'; }
+
+                    if(data.presionAceite < 4.0) {
+                        document.getElementById('c-presionAceite').style.backgroundColor = '#78281f';
+                        alertaActiva = true;
+                    } else { document.getElementById('c-presionAceite').style.backgroundColor = '#2c3e50'; }
+
+                    document.getElementById('bannerAlerta').style.display = alertaActiva ? 'block' : 'none';
+                });
         }
 
-        actualizarPanel();
+        function renderizarGrafica() {
+            const parametro = document.getElementById('parametroSeleccionado').value;
+            const comboTexto = document.getElementById('parametroSeleccionado').options[document.getElementById('parametroSeleccionado').selectedIndex].text;
+
+            fetch('/api/historial')
+                .then(res => res.json())
+                .then(historial => {
+                    const etiquetasHoras = historial.map(d => d.fecha);
+                    const valoresY = historial.map(d => d[parametro]);
+
+                    if (miChart) { miChart.destroy(); } // Destruir gráfica previa para evitar parpadeos
+
+                    const ctx = document.getElementById('miGrafica').getContext('2d');
+                    miChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: etiquetasHoras,
+                            datasets: [{
+                                label: comboTexto,
+                                data: valoresY,
+                                borderColor: '#f1c40f',
+                                backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                                borderWidth: 2,
+                                pointRadius: 1,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } },
+                                y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }
+                            },
+                            plugins: { legend: { labels: { color: 'white' } } }
+                        }
+                    });
+                });
+        }
+
+        // Bucles de refresco
         setInterval(actualizarPanel, 3000);
+        setInterval(renderizarGrafica, 10000); // La gráfica se redibuja cada 10s al llegar datos nuevos
+        
+        // Carga inicial
+        actualizarPanel();
+        setTimeout(renderizarGrafica, 2000);
     </script>
 </body>
 </html>
