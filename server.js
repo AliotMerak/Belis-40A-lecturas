@@ -10,7 +10,7 @@ app.use(express.json());
 let ultimosDatos = {
     temp1ra: "0", temp2da: "0", temp3ra: "0",
     tempAgua: "0", tempAceite: "0", presionAceite: "0",
-    fecha: "Esperando arranque de Compresor No.1..."
+    fecha: "Esperando arranque de Compresor No.2..."
 };
 
 // AHORA USAMOS GET: Recibe las variables directamente en la URL
