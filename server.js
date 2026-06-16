@@ -7,8 +7,8 @@ app.use(express.json());
 
 // Estructura para almacenar el último dato actual
 let ultimosDatos = {
-    temp1ra: "0", temp2da: "0", temp3ra: "0",
-    tempAgua: "0", tempAceite: "0", presionAceite: "0",
+    temp1ra: 0, temp2da: 0, temp3ra: 0,
+    tempAgua: 0, tempAceite: 0, presionAceite: 0,
     fecha: "Esperando Compresor No.1..."
 };
 
@@ -25,8 +25,11 @@ const LIMITES = {
 // Ruta GET que recibe los datos del ESP32
 app.get('/api/enviar', (req, res) => {
     const { temp1ra, temp2da, temp3ra, tempAgua, tempAceite, presionAceite } = req.query;
-    const horaActual = new Date().toLocaleTimeString();
+    
+    // Obtener hora local de México explícitamente sin importar dónde esté el servidor
+    const horaActual = new Date().toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City" });
 
+    // IMPORTANTE: parseFloat() convierte el texto a número puro para Chart.js
     ultimosDatos = {
         temp1ra: parseFloat(temp1ra) || 0,
         temp2da: parseFloat(temp2da) || 0,
@@ -37,29 +40,28 @@ app.get('/api/enviar', (req, res) => {
         fecha: horaActual
     };
 
-    // Agregar al historial para las gráficas de 4 horas
+    // Agregar al historial asegurando que sean números puros
     historialDatos.push({ ...ultimosDatos });
     if (historialDatos.length > MAX_HISTORIAL) {
         historialDatos.shift(); // Borra el más antiguo si excede las 4 horas
     }
 
-    // MONITOREO DE ALERTAS EN TIEMPO REAL
+    // Monitoreo de alertas en consola de Render
     evaluarAlertas(ultimosDatos);
 
     res.status(200).json({ estatus: "COMPRESOR_OK" });
 });
 
-// Función para evaluar alertas e imprimir en consola de Render
 function evaluarAlertas(datos) {
     if (datos.temp3ra > LIMITES.temp3ra.max) {
-        console.log(`[ALERT-EMAIL/SMS] ${LIMITES.temp3ra.msg}: ${datos.temp3ra} °C`);
+        console.log(`[ALERTA] ${LIMITES.temp3ra.msg}: ${datos.temp3ra} °C`);
     }
     if (datos.presionAceite < LIMITES.presionAceite.min) {
-        console.log(`[ALERT-EMAIL/SMS] ${LIMITES.presionAceite.msg}: ${datos.presionAceite} PSI`);
+        console.log(`[ALERTA] ${LIMITES.presionAceite.msg}: ${datos.presionAceite} PSI`);
     }
 }
 
-// Ruta para que la página web obtenga el historial completo de 4 horas
+// Ruta para obtener el historial numérico completo de 4 horas
 app.get('/api/historial', (req, res) => {
     res.json(historialDatos);
 });
