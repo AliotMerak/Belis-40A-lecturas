@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoreo Compresor No.1</title>
-    <!-- Importar la librería Chart.js de forma segura -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Cargamos la librería Chart.js desde un servidor CDN confiable -->
+    <script src="https://cloudflare.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
         h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; }
@@ -15,15 +15,15 @@
         @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
-        .card { background: #2c3e50; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; text-align: left; }
+        .card { background: #2c3e50; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; text-align: left; transition: background-color 0.5s; }
         h3 { margin: 0; font-size: 13px; color: #95a5a6; text-transform: uppercase; }
         .valor { font-size: 28px; font-weight: bold; margin-top: 5px; }
         .unidad { font-size: 16px; color: #bdc3c7; }
         
-        /* Contenedor visible y reforzado para la gráfica */
         .grafica-container { max-width: 1200px; margin: 30px auto; background: #2c3e50; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         select { background: #1e222b; color: white; padding: 8px; border-radius: 5px; border: 1px solid #3498db; margin-bottom: 15px; font-size: 14px; cursor: pointer; }
         
+        #mensajeGrafica { color: #f1c40f; font-weight: bold; margin-top: 10px; display: block; }
         .actualizado { color: #7f8c8d; font-size: 13px; margin-top: 20px; }
     </style>
 </head>
@@ -45,7 +45,7 @@
 
     <div class="grafica-container">
         <label for="parametroSeleccionado">Ver Historial de 4 Horas: </label>
-        <select id="parametroSeleccionado" onchange="renderizarGrafica()">
+        <select id="parametroSeleccionado" onchange="actualizarGrafica(true)">
             <option value="temp3ra">Temperatura 3ra Etapa</option>
             <option value="temp1ra">Temperatura 1ra Etapa</option>
             <option value="temp2da">Temperatura 2da Etapa</option>
@@ -53,8 +53,14 @@
             <option value="tempAceite">Temperatura Aceite</option>
             <option value="presionAceite">Presión de Aceite</option>
         </select>
+        
+        <!-- Texto de advertencia visible en la página para el usuario -->
+        <div id="mensajeGrafica">Esperando datos del ESP32 para trazar la gráfica lineal...</div>
+        
         <!-- Canvas para dibujar el gráfico -->
-        <canvas id="miGrafica" style="width: 100%; height: 300px;"></canvas>
+        <div style="position: relative; height:300px; width:100%">
+            <canvas id="miGrafica"></canvas>
+        </div>
     </div>
 
     <p class="actualizado">Último reporte: <span id="fecha">--</span></p>
@@ -62,6 +68,37 @@
     <script>
         let miChart = null;
 
+        // 1. INICIALIZAR LA GRÁFICA EN BLANCO UNA SOLA VEZ AL CARGAR LA PÁGINA
+        function inicializarGrafica() {
+            const ctx = document.getElementById('miGrafica').getContext('2d');
+            miChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Cargando parámetro...',
+                        data: [],
+                        borderColor: '#f1c40f',
+                        backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } },
+                        y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }
+                    },
+                    plugins: { legend: { labels: { color: 'white' } } }
+                }
+            });
+        }
+
+        // 2. ACTUALIZAR LOS VALORES NUMÉRICOS SUPERIORES
         function actualizarPanel() {
             fetch('/api/datos')
                 .then(res => res.json())
@@ -76,75 +113,62 @@
 
                     let alertaActiva = false;
                     
-                    if(parseFloat(data.temp3ra) > 140) {
+                    if(Number(data.temp3ra) > 140) {
                         document.getElementById('c-temp3ra').style.backgroundColor = '#78281f';
                         alertaActiva = true;
                     } else { document.getElementById('c-temp3ra').style.backgroundColor = '#2c3e50'; }
 
-                    if(parseFloat(data.presionAceite) < 4.0) {
+                    if(Number(data.presionAceite) < 4.0) {
                         document.getElementById('c-presionAceite').style.backgroundColor = '#78281f';
                         alertaActiva = true;
                     } else { document.getElementById('c-presionAceite').style.backgroundColor = '#2c3e50'; }
 
                     document.getElementById('bannerAlerta').style.display = alertaActiva ? 'block' : 'none';
                 })
-                .catch(err => console.error("Error leyendo datos actuales:", err));
+                .catch(err => console.error("Error cargando datos instantáneos:", err));
         }
 
-        function renderizarGrafica() {
+        // 3. INYECTAR DATOS HISTÓRICOS A LA GRÁFICA EN SEGUNDO PLANO
+        function actualizarGrafica(esCambioManual = false) {
             const parametro = document.getElementById('parametroSeleccionado').value;
             const comboTexto = document.getElementById('parametroSeleccionado').options[document.getElementById('parametroSeleccionado').selectedIndex].text;
 
             fetch('/api/historial')
                 .then(res => res.json())
                 .then(historial => {
+                    // Ocultar o mostrar el letrero dependiendo de si hay suficiente historial (mínimo 2 puntos)
                     if (!historial || historial.length < 2) {
-                        console.log("Esperando más datos del ESP32 para trazar la gráfica...");
-                        return; 
+                        document.getElementById('mensajeGrafica').style.display = 'block';
+                        document.getElementById('mensajeGrafica').innerText = "Recopilando muestras del ESP32... (" + (historial ? historial.length : 0) + "/2 recibidas)";
+                        return;
                     }
+                    
+                    // Si ya hay datos, ocultamos el mensaje de espera
+                    document.getElementById('mensajeGrafica').style.display = 'none';
 
+                    // Extraer los arreglos de tiempos y de valores
                     const etiquetasHoras = historial.map(d => d.fecha);
-                    const valoresY = historial.map(d => d[parametro]);
+                    const valoresY = historial.map(d => Number(d[parametro]));
 
-                    if (miChart) { miChart.destroy(); } 
-
-                    const ctx = document.getElementById('miGrafica').getContext('2d');
-                    miChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: etiquetasHoras,
-                            datasets: [{
-                                label: comboTexto,
-                                data: valoresY,
-                                borderColor: '#f1c40f',
-                                backgroundColor: 'rgba(241, 196, 15, 0.1)',
-                                borderWidth: 2,
-                                pointRadius: 2,
-                                fill: true,
-                                tension: 0.2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } },
-                                y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }
-                            },
-                            plugins: { legend: { labels: { color: 'white' } } }
-                        }
-                    });
+                    // Actualizar el objeto Chart existente en lugar de destruirlo
+                    miChart.data.labels = etiquetasHoras;
+                    miChart.data.datasets[0].label = comboTexto;
+                    miChart.data.datasets[0].data = valoresY;
+                    
+                    // Refrescar visualmente la pantalla sin parpadeos
+                    miChart.update('none'); 
                 })
-                .catch(err => console.error("Error leyendo historial:", err));
+                .catch(err => console.error("Error cargando historial de la API:", err));
         }
 
-        // Ejecución e intervalos
-        setInterval(actualizarPanel, 3000);
-        setInterval(renderizarGrafica, 10000); 
-        
-        // Carga inicial al abrir la página
+        // --- ARRANQUE AUTOMÁTICO AL INSTANTE ---
+        inicializarGrafica();
         actualizarPanel();
-        setTimeout(renderizarGrafica, 2000);
+        setTimeout(() => actualizarGrafica(false), 1500);
+
+        // --- INTERVALOS DE REFRESCO PERMANENTE ---
+        setInterval(actualizarPanel, 3000);      // Cada 3 segundos actualiza números superiores
+        setInterval(actualizarGrafica, 10000);   // Cada 10 segundos refresca la línea del gráfico
     </script>
 </body>
 </html>
