@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consola Compresor No.1</title>
+    <!-- Librería certificada para exportación limpia a archivos .xlsx (Excel) -->
+    <script src="https://cloudflare.com" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
         h1 { color: #f1c40f; margin-bottom: 5px; text-transform: uppercase; }
@@ -23,102 +25,116 @@
         .control-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
         input[type="number"] { background: #1e222b; color: white; padding: 6px; border-radius: 4px; border: 1px solid #3498db; width: 85px; text-align: center; }
         
-        /* DISEÑO DE TABLA INDUSTRIAL LOG */
-        .tabla-container { max-width: 1200px; margin: 30px auto; background: #2c3e50; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow-x: auto; max-height: 400px; overflow-y: auto; }
-        .tabla-container h4 { text-align: left; margin: 0 0 15px 0; color: #f1c40f; text-transform: uppercase; font-size: 14px; }
+        /* Contenedor Tabla Industrial y Controles del Log */
+        .tabla-container { max-width: 1200px; margin: 25px auto; background: #2c3e50; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .tabla-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #34495e; padding-bottom: 10px; }
+        .tabla-header-flex h4 { margin: 0; color: #f1c40f; text-transform: uppercase; font-size: 14px; }
+        
+        /* Botón Excel Industrial */
+        .btn-excel { background-color: #27ae60; color: white; border: none; padding: 8px 16px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-excel:hover { background-color: #219653; }
+        
+        .area-scroll { max-height: 400px; overflow-y: auto; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
         th { background-color: #1e222b; color: #3498db; padding: 10px; position: sticky; top: 0; text-transform: uppercase; font-size: 11px; }
         td { padding: 8px; border-bottom: 1px solid #34495e; color: #e5e8e8; }
         tr:nth-child(even) { background-color: #243342; }
         .alert-row { color: #f1948a !important; font-weight: bold; background-color: rgba(120, 40, 31, 0.4) !important; }
-        
         .actualizado { color: #7f8c8d; font-size: 13px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola de Telemetría Industrial con Registro Tabular Histórico (Muestreos de 30s)</div>
-    <div id="bannerAlerta">⚠️ ATENCIÓN: VALORES OPERATIVOS FUERA DE LÍMITES AJUSTADOS</div>
+    <div class="sub">Consola Industrial Homologada con Historial de 16 Horas y Exportación Certificada .XLSX</div>
+    <div id="bannerAlerta">⚠️ ATENCIÓN: DETECTADOS PARÁMETROS FUERA DE LÍMITES AJUSTADOS</div>
 
+    <!-- Cajas Superiores en Tiempo Real -->
     <div class="grid">
-        <div class="card" id="c-temp1ra"><h3>Temp. 1ra Etapa</h3><div class="valor" id="temp1ra">-- <span class="unidad">°C</span></div></div>
-        <div class="card" id="c-temp2da"><h3>Temp. 2da Etapa</h3><div class="valor" id="temp2da">-- <span class="unidad">°C</span></div></div>
-        <div class="card" id="c-temp3ra"><h3>Temp. 3ra Etapa</h3><div class="valor" id="temp3ra">-- <span class="unidad">°C</span></div></div>
-        <div class="card" id="c-tempAgua"><h3>Temp. Agua Enfr.</h3><div class="valor" id="tempAgua">-- <span class="unidad">°C</span></div></div>
-        <div class="card" id="c-tempAceite"><h3>Temp. Aceite</h3><div class="valor" id="tempAceite">-- <span class="unidad">°C</span></div></div>
-        <div class="card" id="c-presionAceite"><h3>Presión Aceite</h3><div class="valor" id="presionAceite">-- <span class="unidad">PSI</span></div></div>
+        <div class="card" id="c-temp1ra"><h3>Temp. 1ra Etapa</h3><div class="valor" id="temp1ra">-- <span class="unidad">°F</span></div></div>
+        <div class="card" id="c-temp2da"><h3>Temp. 2da Etapa</h3><div class="valor" id="temp2da">-- <span class="unidad">°F</span></div></div>
+        <div class="card" id="c-temp3ra"><h3>Temp. 3ra Etapa</h3><div class="valor" id="temp3ra">-- <span class="unidad">°F</span></div></div>
+        <div class="card" id="c-tempAgua"><h3>Temp. Agua Enfr.</h3><div class="valor" id="tempAgua">-- <span class="unidad">°F</span></div></div>
+        <div class="card" id="c-tempAceite"><h3>Temp. Aceite</h3><div class="valor" id="tempAceite">-- <span class="unidad">°F</span></div></div>
+        <div class="card" id="c-presionAceite"><h3>Presión Aceite</h3><div class="valor" id="presionAceite">-- <span class="unidad">Bar</span></div></div>
     </div>
 
+    <!-- Ajustes de Setpoints en °F y Bar -->
     <div class="seccion-controles">
         <div class="panel-ajustes">
-            <h4>Setpoints Críticos de Alerta</h4>
-            <div class="control-group"><label>Máx Temp 1ra Etapa (°C):</label><input type="number" id="s-temp1ra" value="85" onchange="guardarSetpoints()"></div>
-            <div class="control-group"><label>Máx Temp 2da Etapa (°C):</label><input type="number" id="s-temp2da" value="115" onchange="guardarSetpoints()"></div>
-            <div class="control-group"><label>Máx Temp 3ra Etapa (°C):</label><input type="number" id="s-temp3ra" value="140" onchange="guardarSetpoints()"></div>
+            <h4>Setpoints de Alerta Industrial (°F)</h4>
+            <div class="control-group"><label>Máx Temp 1ra Etapa:</label><input type="number" id="s-temp1ra" value="185" onchange="guardarSetpoints()"></div>
+            <div class="control-group"><label>Máx Temp 2da Etapa:</label><input type="number" id="s-temp2da" value="239" onchange="guardarSetpoints()"></div>
+            <div class="control-group"><label>Máx Temp 3ra Etapa:</label><input type="number" id="s-temp3ra" value="284" onchange="guardarSetpoints()"></div>
         </div>
         <div class="panel-ajustes">
-            <h4>&nbsp;</h4>
-            <div class="control-group"><label>Máx Temp Agua Enfr. (°C):</label><input type="number" id="s-tempAgua" value="42" onchange="guardarSetpoints()"></div>
-            <div class="control-group"><label>Máx Temp Aceite (°C):</label><input type="number" id="s-tempAceite" value="72" onchange="guardarSetpoints()"></div>
-            <div class="control-group"><label>Mín Presión Aceite (PSI):</label><input type="number" id="s-presionAceite" value="4.0" step="0.1" onchange="guardarSetpoints()"></div>
+            <h4>Setpoints de Alerta Industrial (°F / Bar)</h4>
+            <div class="control-group"><label>Máx Temp Agua Enfr.:</label><input type="number" id="s-tempAgua" value="107" onchange="guardarSetpoints()"></div>
+            <div class="control-group"><label>Máx Temp Aceite:</label><input type="number" id="s-tempAceite" value="161" onchange="guardarSetpoints()"></div>
+            <div class="control-group"><label>Mín Presión Aceite (Bar):</label><input type="number" id="s-presionAceite" value="2.8" step="0.1" onchange="guardarSetpoints()"></div>
+        </div>
+    </div>
+        <!-- Historial de 16 Horas de Operación -->
+    <div class="tabla-container">
+        <div class="tabla-header-flex">
+            <h4>Registro de Operación de 16 Horas (Muestras por Minuto)</h4>
+            <button class="btn-excel" onclick="exportarExcelCompresor()">📊 Exportar a Excel</button>
+        </div>
+        <div class="area-scroll">
+            <table id="tablaHistoricaCompresor">
+                <thead>
+                    <tr>
+                        <th>Día y Hora</th>
+                        <th>T1 ETAPA</th>
+                        <th>T2 ETAPA</th>
+                        <th>T3 ETAPA</th>
+                        <th>T AGUA</th>
+                        <th>T ACEITE</th>
+                        <th>P ACEITE</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoTablaHistorial">
+                    <tr><td colspan="7">Recopilando registros históricos del Compresor No.1...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Contenedor del Historial Tabular de 4-8 Horas -->
-    <div class="tabla-container">
-        <h4>Registro Histórico Cronológico (Últimas muestras en RAM)</h4>
-        <table>
-            <thead>
-                <tr>
-                    <th>Hora Reporte</th>
-                    <th>T. 1ra Etapa</th>
-                    <th>T. 2da Etapa</th>
-                    <th>T. 3ra Etapa</th>
-                    <th>T. Agua Enfr.</th>
-                    <th>T. Aceite</th>
-                    <th>P. Aceite</th>
-                </tr>
-            </thead>
-            <tbody id="cuerpoTablaHistorial">
-                <tr><td colspan="7">Esperando transmisiones iniciales del Compresor No.1...</td></tr>
-            </tbody>
-        </table>
-    </div>
+    <p class="actualizado">Última actualización de tarjetas (10s): <span id="fecha">--</span></p>
 
-    <p class="actualizado">Última lectura: <span id="fecha">--</span></p>
-        <script>
+    <script>
         const variables = ['temp1ra', 'temp2da', 'temp3ra', 'tempAgua', 'tempAceite', 'presionAceite'];
 
-        // Cargar setpoints del almacenamiento local
+        // Cargar setpoints guardados en el navegador
         variables.forEach(v => {
-            if(localStorage.getItem(`set_${v}`)) document.getElementById(`s-${v}`).value = localStorage.getItem(`set_${v}`);
+            if(localStorage.getItem(`set_f_${v}`)) document.getElementById(`s-${v}`).value = localStorage.getItem(`set_f_${v}`);
         });
 
         function guardarSetpoints() {
             variables.forEach(v => {
-                localStorage.setItem(`set_${v}`, document.getElementById(`s-${v}`).value);
+                localStorage.setItem(`set_f_${v}`, document.getElementById(`s-${v}`).value);
             });
-            actualizarPanelYTabla();
+            actualizarConsola();
         }
 
-        function actualizarPanelYTabla() {
-            // 1. LEER VALORES EN TIEMPO REAL PARA LAS TARJETAS
+        function actualizarConsola() {
+            // 1. LEER CAJAS SUPERIORES EN TIEMPO REAL
             fetch('/api/datos')
                 .then(res => res.json())
                 .then(data => {
                     if(!data || !data.fecha || data.fecha.includes("Esperando")) return;
 
-                    document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
-                    document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
-                    document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°C</span>';
-                    document.getElementById('tempAgua').innerHTML = data.tempAgua + ' <span class="unidad">°C</span>';
-                    document.getElementById('tempAceite').innerHTML = data.tempAceite + ' <span class="unidad">°C</span>';
-                    document.getElementById('presionAceite').innerHTML = data.presionAceite + ' <span class="unidad">PSI</span>';
+                    // Omitir decimales en temperaturas y dejar 1 decimal en la presión
+                    document.getElementById('temp1ra').innerHTML = Math.round(data.temp1ra) + ' <span class="unidad">°F</span>';
+                    document.getElementById('temp2da').innerHTML = Math.round(data.temp2da) + ' <span class="unidad">°F</span>';
+                    document.getElementById('temp3ra').innerHTML = Math.round(data.temp3ra) + ' <span class="unidad">°F</span>';
+                    document.getElementById('tempAgua').innerHTML = Math.round(data.tempAgua) + ' <span class="unidad">°F</span>';
+                    document.getElementById('tempAceite').innerHTML = Math.round(data.tempAceite) + ' <span class="unidad">°F</span>';
+                    document.getElementById('presionAceite').innerHTML = data.presionAceite.toFixed(1) + ' <span class="unidad">Bar</span>';
                     document.getElementById('fecha').innerText = data.fecha;
                 });
 
-            // 2. DESPLEGAR EL HISTORIAL TABULAR DE HASTA 8 HORAS
+            // 2. CONSTRUIR TABLA CON FORMATO INDUSTRIAL LIMPIO
             fetch('/api/historial')
                 .then(res => res.json())
                 .then(historial => {
@@ -127,24 +143,22 @@
                     let htmlTabla = "";
                     let alarmaGlobalActiva = false;
 
-                    // Escanear renglón por renglón el historial recibido
                     historial.forEach(registro => {
                         let filaConAlerta = false;
                         let tarjetasAlerta = {};
 
-                        // Evaluar cada variable contra sus setpoints actuales
                         variables.forEach(v => {
                             const val = Number(registro[v]);
                             const limite = Number(document.getElementById(`s-${v}`).value);
-                            
                             let fueraDeRango = (v === 'presionAceite') ? (val < limite) : (val > limite);
+                            
                             if(fueraDeRango) {
                                 filaConAlerta = true;
                                 tarjetasAlerta[v] = true;
                             }
                         });
 
-                        // Si es el registro más nuevo (posición 0), pintamos las tarjetas superiores
+                        // Sincronizar colores de las cajas superiores basados en la última lectura recibida
                         if(historial.indexOf(registro) === 0) {
                             variables.forEach(v => {
                                 document.getElementById(`c-${v}`).style.backgroundColor = tarjetasAlerta[v] ? '#78281f' : '#2c3e50';
@@ -152,15 +166,15 @@
                             });
                         }
 
-                        // Construir la fila HTML
+                        // Formatear filas de la tabla: temperaturas Enteras, presión con 1 Decimal, SIN UNIDADES
                         htmlTabla += `<tr class="${filaConAlerta ? 'alert-row' : ''}">
-                            <td>${registro.fecha}</td>
-                            <td>${registro.temp1ra} °C</td>
-                            <td>${registro.temp2da} °C</td>
-                            <td>${registro.temp3ra} °C</td>
-                            <td>${registro.tempAgua} °C</td>
-                            <td>${registro.tempAceite} °C</td>
-                            <td>${registro.presionAceite} PSI</td>
+                            <td>${registro.fechaTabla}</td>
+                            <td>${Math.round(registro.temp1ra)}</td>
+                            <td>${Math.round(registro.temp2da)}</td>
+                            <td>${Math.round(registro.temp3ra)}</td>
+                            <td>${Math.round(registro.tempAgua)}</td>
+                            <td>${Math.round(registro.tempAceite)}</td>
+                            <td>${registro.presionAceite.toFixed(1)}</td>
                         </tr>`;
                     });
 
@@ -169,9 +183,33 @@
                 }).catch(err => console.error(err));
         }
 
-        // Bucle permanente de refresco cada 3 segundos en pantalla
-        actualizarPanelYTabla();
-        setInterval(actualizarPanelYTabla, 3000);
+        // --- EXPORTACIÓN INDUSTRIAL DE EXCEL CON TÍTULO DINÁMICO ---
+        function exportarExcelCompresor() {
+            const cuerpo = document.getElementById('cuerpoTablaHistorial');
+            if(cuerpo.innerText.includes("Recopilando")) {
+                alert("Aún no existen registros históricos acumulados para exportar.");
+                return;
+            }
+
+            // Extraer las filas directamente de la tabla para el archivo Excel
+            const tablaElemento = document.getElementById('tablaHistoricaCompresor');
+            const libroTrabajo = XLSX.utils.table_to_book(tablaElemento, { sheet: "Telemetría Compresor" });
+
+            // Obtener dinámicamente la fecha inicial (última fila de la tabla) y final (primera fila de la tabla)
+            const filas = tablaElemento.querySelectorAll('tbody tr');
+            const fechaFinalStr = filas[0].cells[0].innerText.replace(/[\/:]/g, '-');
+            const fechaInicialStr = filas[filas.length - 1].cells[0].innerText.replace(/[\/:]/g, '-');
+
+            // Armar el título exacto solicitado
+            const nombreArchivo = `Compresor_No1_Inicio_[${fechaInicialStr}]_Fin_[${fechaFinalStr}].xlsx`;
+
+            // Forzar descarga del archivo de Excel real en la laptop del operador
+            XLSX.writeFile(libroTrabajo, nombreArchivo);
+        }
+
+        // Intervalo rápido de 10 segundos para el dinamismo de las cajas y la tabla
+        actualizarConsola();
+        setInterval(actualizarConsola, 10000);
     </script>
 </body>
 </html>
