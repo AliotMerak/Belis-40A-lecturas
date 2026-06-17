@@ -30,8 +30,8 @@
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola Industrial Automatizada con Configuración de Setpoints Independientes</div>
-    <div id="bannerAlerta">⚠️ ANOMALÍA CRÍTICA: PARÁMETROS FUERA DE LÍMITES AJUSTADOS EN CONSOLA</div>
+    <div class="sub">Consola de Ingeniería con Amplitudes y Límites Dinámicos por Señal</div>
+    <div id="bannerAlerta">⚠️ ALERTA DE MAQUINARIA: VALOR OPERATIVO FUERA DE CONTROL INDUSTRIAL</div>
 
     <div class="grid">
         <div class="card" id="c-temp1ra"><h3>Temp. 1ra Etapa</h3><div class="valor" id="temp1ra">-- <span class="unidad">°C</span></div></div>
@@ -44,14 +44,14 @@
 
     <div class="seccion-controles">
         <div class="panel-ajustes">
-            <h4 id="titulo_setpoint">Límite de Alerta</h4>
+            <h4 id="titulo_setpoint">Ajuste de Alerta</h4>
             <div class="control-group">
-                <label id="label_setpoint">Valor Umbral Crítico:</label>
+                <label id="label_setpoint">Valor Límite Deseado:</label>
                 <input type="number" id="input_setpoint" value="140" step="0.1" onchange="modificarConfiguracion('alerta')">
             </div>
         </div>
         <div class="panel-ajustes">
-            <h4>Amplitud del Gráfico (Eje Y)</h4>
+            <h4>Escala de Gráfica (Eje Y)</h4>
             <div class="control-group"><label>Límite Superior MÁX:</label><input type="number" id="grafica_max" value="160" onchange="modificarConfiguracion('maxY')"></div>
             <div class="control-group"><label>Límite Inferior MÍN:</label><input type="number" id="grafica_min" value="0" onchange="modificarConfiguracion('minY')"></div>
         </div>
@@ -70,10 +70,10 @@
         <div style="position: relative; height:300px; width:100%"><canvas id="miGrafica"></canvas></div>
     </div>
     <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
-        <script>
+       <script>
         let miChart = null;
 
-        // MAPA CONFIGURABLE POR DEFECTO PARA CADA PARÁMETRO INDUSTRIAL
+        // MAPA DE PARÁMETROS CON SUS LÍMITES TOTALMENTE INDEPENDIENTES
         let CONFIG_PARAMETROS = {
             temp1ra:       { alerta: 85,  tipo: 'MAX', minY: 40,  maxY: 100 },
             temp2da:       { alerta: 115, tipo: 'MAX', minY: 60,  maxY: 140 },
@@ -83,31 +83,33 @@
             presionAceite: { alerta: 4.0, tipo: 'MIN', minY: 0,   maxY: 10  }
         };
 
-        // Recuperar configuraciones personalizadas de memoria si existen
-        if(localStorage.getItem('CONFIG_COMPRESOR_V3')) {
-            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V3'));
+        // Recuperar preferencias en la memoria del navegador para retener cambios del usuario
+        if(localStorage.getItem('CONFIG_COMPRESOR_FINAL')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_FINAL'));
         }
 
         function guardarEnAlmacenamiento() {
-            localStorage.setItem('CONFIG_COMPRESOR_V3', JSON.stringify(CONFIG_PARAMETROS));
+            localStorage.setItem('CONFIG_COMPRESOR_FINAL', JSON.stringify(CONFIG_PARAMETROS));
         }
 
-        // Se ejecuta cuando el usuario cambia de parámetro en el menú desplegable
+        // Se ejecuta al elegir una señal en el menú desplegable
         function cambiarParametroVisualizado() {
             const param = document.getElementById('parametroSeleccionado').value;
             const config = CONFIG_PARAMETROS[param];
 
-            document.getElementById('titulo_setpoint').innerText = `Setpoint Alerta - ${config.tipo === 'MAX' ? 'Alta' : 'Baja'}`;
-            document.getElementById('label_setpoint').innerText = `${config.tipo === 'MAX' ? 'Límite Máximo Permitido:' : 'Límite Mínimo Requerido:'}`;
+            // Ajustar los títulos basándose en el tipo de alarma (Máxima o Mínima para presión)
+            document.getElementById('titulo_setpoint').innerText = `Setpoint Alerta - ${config.tipo == 'MAX' ? 'Alta' : 'Baja'}`;
+            document.getElementById('label_setpoint').innerText = `${config.tipo == 'MAX' ? 'Límite Máximo Permitido:' : 'Límite Mínimo Requerido:'}`;
             document.getElementById('input_setpoint').value = config.alerta;
 
+            // Ajustar los valores numéricos de las cajas del Eje Y
             document.getElementById('grafica_max').value = config.maxY;
             document.getElementById('grafica_min').value = config.minY;
 
             actualizarGrafica();
         }
 
-        // Se ejecuta cuando el usuario edita a mano cualquier caja numérica
+        // Se ejecuta si el usuario edita a mano los inputs de la pantalla
         function modificarConfiguracion(tipo) {
             const param = document.getElementById('parametroSeleccionado').value;
             
@@ -145,6 +147,7 @@
 
                     let alarmaDisparada = false;
 
+                    // Monitoreo constante en segundo plano de los 6 límites independientes
                     Object.keys(CONFIG_PARAMETROS).forEach(p => {
                         const valorActual = Number(data[p]);
                         const limite = CONFIG_PARAMETROS[p].alerta;
@@ -187,7 +190,7 @@
                         miChart.options.scales.y.max = conf.maxY;
                         miChart.options.scales.y.min = conf.minY;
 
-                        // ¡CORRECCIÓN CRÍTICA DE SINTAXIS APLICADA AQUÍ ([0])!
+                        // ¡SINTAXIS CORREGIDA CON ÉXITO EXPLICITANDO EL ÍNDICE [0] DE DATASETS!
                         miChart.data.labels = etiquetasHoras;
                         miChart.data.datasets[0].label = comboTexto; 
                         miChart.data.datasets[0].data = valoresY;
