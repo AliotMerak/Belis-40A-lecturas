@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consola Compresor No.1</title>
-    <!-- LIBRERÍA OFICIAL ULTRA-COMPATIBLE DISTRIBUIDA POR CLOUDFLARE -->
+    <!-- Distribución oficial de Chart.js via Cloudflare -->
     <script src="https://cloudflare.com" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
@@ -31,7 +31,7 @@
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola de Ingeniería con Amplitudes y Límites Dinámicos por Señal</div>
+    <div class="sub">Consola de Ingeniería Avanzada con Amplitudes y Límites de Alarma Modulares</div>
     <div id="bannerAlerta">⚠️ ALERTA DE MAQUINARIA: VALOR OPERATIVO FUERA DE CONTROL INDUSTRIAL</div>
 
     <div class="grid">
@@ -71,10 +71,9 @@
         <div style="position: relative; height:300px; width:100%"><canvas id="miGrafica"></canvas></div>
     </div>
     <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
-        <script>
+       <script>
         let miChart = null;
 
-        // MAPA DE PARÁMETROS CON SUS LÍMITES TOTALMENTE INDEPENDIENTES
         let CONFIG_PARAMETROS = {
             temp1ra:       { alerta: 85,  tipo: 'MAX', minY: 40,  maxY: 100 },
             temp2da:       { alerta: 115, tipo: 'MAX', minY: 60,  maxY: 140 },
@@ -84,12 +83,12 @@
             presionAceite: { alerta: 4.0, tipo: 'MIN', minY: 0,   maxY: 10  }
         };
 
-        if(localStorage.getItem('CONFIG_COMPRESOR_PRO_V1')) {
-            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_PRO_V1'));
+        if(localStorage.getItem('CONFIG_COMPRESOR_V4')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V4'));
         }
 
         function guardarEnAlmacenamiento() {
-            localStorage.setItem('CONFIG_COMPRESOR_PRO_V1', JSON.stringify(CONFIG_PARAMETROS));
+            localStorage.setItem('CONFIG_COMPRESOR_V4', JSON.stringify(CONFIG_PARAMETROS));
         }
 
         function cambiarParametroVisualizado() {
@@ -105,7 +104,7 @@
                 document.getElementById('grafica_min').value = config.minY;
 
                 actualizarGrafica();
-            } catch (e) { console.error("Error al cambiar parámetro:", e); }
+            } catch (e) { console.error(e); }
         }
 
         function modificarConfiguracion(tipo) {
@@ -128,7 +127,7 @@
                     options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }, y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' }, min: 0, max: 160 } }, plugins: { legend: { labels: { color: 'white' } } } }
                 });
                 cambiarParametroVisualizado();
-            } catch (e) { console.error("Error al inicializar gráfica:", e); }
+            } catch (e) { console.error(e); }
         }
 
         function actualizarPanel() {
@@ -137,7 +136,6 @@
                 .then(data => {
                     if(!data || !data.fecha || data.fecha.includes("Esperando")) return;
                     
-                    // AISLAMIENTO DE SEGURIDAD: Los números se escriben sí o sí en pantalla
                     document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
                     document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
                     document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°C</span>';
@@ -166,7 +164,7 @@
                     });
 
                     document.getElementById('bannerAlerta').style.display = alarmaDisparada ? 'block' : 'none';
-                }).catch(err => console.error("Error leyendo datos de la API:", err));
+                }).catch(err => console.error(err));
         }
 
         function actualizarGrafica() {
@@ -192,6 +190,7 @@
                             miChart.options.scales.y.max = conf.maxY;
                             miChart.options.scales.y.min = conf.minY;
 
+                            // REPARACIÓN COMPLETA: Inyección de datos indexando la primera posición [0] de los arreglos de datasets
                             miChart.data.labels = etiquetasHoras;
                             miChart.data.datasets[0].label = comboTexto; 
                             miChart.data.datasets[0].data = valoresY;
@@ -199,10 +198,9 @@
                             miChart.update('none');
                         }
                     }).catch(err => console.error(err));
-            } catch (e) { console.error("Error actualizando gráfica:", e); }
+            } catch (e) { console.error(e); }
         }
 
-        // Arranque inicial secuencial protegido
         setTimeout(inicializarGrafica, 500);
         setInterval(actualizarPanel, 3000);
         setInterval(actualizarGrafica, 5000);
