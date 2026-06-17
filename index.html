@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consola Compresor No.1</title>
-    <!-- Cargamos Chart.js desde la red oficial de Cloudflare -->
+    <!-- Importación oficial de Chart.js desde Cloudflare -->
     <script src="https://cloudflare.com" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
@@ -31,7 +31,7 @@
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola de Ingeniería Avanzada con Amplitudes y Límites de Alarma Modulares</div>
+    <div class="sub">Consola de Ingeniería con Amplitudes y Límites Dinámicos por Señal</div>
     <div id="bannerAlerta">⚠️ ALERTA DE MAQUINARIA: VALOR OPERATIVO FUERA DE CONTROL INDUSTRIAL</div>
 
     <div class="grid">
@@ -68,16 +68,15 @@
             <option value="presionAceite">Presión de Aceite</option>
         </select>
         <div id="mensajeGrafica">Esperando datos del ESP32...</div>
-        
-        <!-- CORRECCIÓN DE CONTENEDOR: Forzamos una altura física real en píxeles (320px) para que no sea invisible -->
         <div style="position: relative; height: 320px; width: 100%;">
-            <canvas id="miGrafica" style="height: 320px; width: 100%;"></canvas>
+            <canvas id="miGrafica"></canvas>
         </div>
     </div>
     <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
         <script>
         let miChart = null;
 
+        // MAPA DE PARÁMETROS CON SUS LÍMITES TOTALMENTE INDEPENDIENTES
         let CONFIG_PARAMETROS = {
             temp1ra:       { alerta: 85,  tipo: 'MAX', minY: 40,  maxY: 100 },
             temp2da:       { alerta: 115, tipo: 'MAX', minY: 60,  maxY: 140 },
@@ -87,12 +86,12 @@
             presionAceite: { alerta: 4.0, tipo: 'MIN', minY: 0,   maxY: 10  }
         };
 
-        if(localStorage.getItem('CONFIG_COMPRESOR_V5')) {
-            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V5'));
+        if(localStorage.getItem('CONFIG_COMPRESOR_FINAL_V6')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_FINAL_V6'));
         }
 
         function guardarEnAlmacenamiento() {
-            localStorage.setItem('CONFIG_COMPRESOR_V5', JSON.stringify(CONFIG_PARAMETROS));
+            localStorage.setItem('CONFIG_COMPRESOR_FINAL_V6', JSON.stringify(CONFIG_PARAMETROS));
         }
 
         function cambiarParametroVisualizado() {
@@ -108,7 +107,7 @@
                 document.getElementById('grafica_min').value = config.minY;
 
                 actualizarGrafica();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error cambiando parámetro:", e); }
         }
 
         function modificarConfiguracion(tipo) {
@@ -131,7 +130,7 @@
                     options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }, y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' }, min: 0, max: 160 } }, plugins: { legend: { labels: { color: 'white' } } } }
                 });
                 cambiarParametroVisualizado();
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error inicializando gráfico:", e); }
         }
 
         function actualizarPanel() {
@@ -190,22 +189,23 @@
                         const etiquetasHoras = historial.map(d => d.fecha);
                         const valoresY = historial.map(d => Number(d[parametro]));
 
-                        if (miChart && miChart.options && miChart.data && miChart.data.datasets && miChart.data.datasets[0]) {
-                            // CORRECCIÓN TOTAL DE INTEGRACIÓN DE DATASETS MEDIANTE ÍNDICES EXPLICITADOS '[0]'
+                        if (miChart && miChart.options && miChart.data && miChart.data.datasets) {
                             miChart.options.scales.y.max = conf.maxY;
                             miChart.options.scales.y.min = conf.minY;
 
                             miChart.data.labels = etiquetasHoras;
+                            
+                            // EXPLICITACIÓN OBLIGATORIA DEL ÍNDICE DE MATRIZ [0] PARA COMPATIBILIDAD CON CHART.JS V3
                             miChart.data.datasets[0].label = comboTexto; 
                             miChart.data.datasets[0].data = valoresY;
                             
                             miChart.update('none');
                         }
                     }).catch(err => console.error(err));
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error inyectando historial:", e); }
         }
 
-        // Arranque inicial ordenado
+        // Arranque secuencial protegido
         setTimeout(inicializarGrafica, 500);
         setInterval(actualizarPanel, 3000);
         setInterval(actualizarGrafica, 5000);
