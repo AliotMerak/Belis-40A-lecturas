@@ -5,22 +5,29 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Registro instantáneo actual
 let ultimosDatos = {
     temp1ra: 0, temp2da: 0, temp3ra: 0,
     tempAgua: 0, tempAceite: 0, presionAceite: 0,
-    fecha: "Esperando Compresor No.1..."
+    fecha: "Esperando Compresor..."
 };
 
-// Historial en memoria RAM (960 muestras = 8 horas a ritmo de 30 segundos)
+// Historial en RAM (960 muestras = 16 horas con intervalos de 1 minuto)
 let historialDatos = [];
 const MAX_HISTORIAL = 960; 
+
+// Variable auxiliar para controlar el almacenamiento histórico de un minuto
+let ultimoMinutoRegistrado = "";
 
 app.get('/api/enviar', (req, res) => {
     const { temp1ra, temp2da, temp3ra, tempAgua, tempAceite, presionAceite } = req.query;
     
-    // Captura estricta con la hora local de México configurada en Render
-    const horaActual = new Date().toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City" });
+    // Obtener marcas de tiempo local de México
+    const ahora = new Date();
+    const horaCompleta = ahora.toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City" });
+    
+    // Formato de hora limpio sin segundos para la tabla (Ej: 17:05 o 05:05 PM según navegador)
+    const horaSinSegundos = ahora.toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City", hour: '2-digit', minute: '2-digit' });
+    const fechaCompleta = ahora.toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" });
 
     ultimosDatos = {
         temp1ra: parseFloat(temp1ra) || 0,
@@ -29,20 +36,26 @@ app.get('/api/enviar', (req, res) => {
         tempAgua: parseFloat(tempAgua) || 0,
         tempAceite: parseFloat(tempAceite) || 0,
         presionAceite: parseFloat(presionAceite) || 0,
-        fecha: horaActual
+        fecha: horaCompleta // Para las tarjetas mantiene el dinamismo total con segundos
     };
 
-    // Almacenamiento en matriz histórica
-    historialDatos.unshift({ ...ultimosDatos }); // .unshift inserta al inicio para ver lo más nuevo primero
-    
-    if (historialDatos.length > MAX_HISTORIAL) {
-        historialDatos.pop(); // Elimina el registro más antiguo (exceso de 8 horas)
+    // --- FILTRO DE ENTRADA INDUSTRIAL HISTÓRICA (1 MUESTRA POR MINUTO) ---
+    if (horaSinSegundos !== ultimoMinutoRegistrado) {
+        ultimoMinutoRegistrado = horaSinSegundos;
+
+        historialDatos.unshift({
+            ...ultimosDatos,
+            fechaTabla: `${fechaCompleta} ${horaSinSegundos}` // Almacena Día y Hora sin segundos para la tabla
+        });
+
+        if (historialDatos.length > MAX_HISTORIAL) {
+            historialDatos.pop(); // Mantener ventana estricta de las últimas 16 horas
+        }
     }
 
     res.status(200).json({ estatus: "COMPRESOR_OK" });
 });
 
-// Ruta pública para que la web descargue las 960 filas del historial
 app.get('/api/historial', (req, res) => {
     res.json(historialDatos);
 });
@@ -56,5 +69,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor de registro histórico activo en puerto ${PORT}`);
+    console.log(`Servidor industrial optimizado a 16 Horas corriendo en puerto ${PORT}`);
 });
