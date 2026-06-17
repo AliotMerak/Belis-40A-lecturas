@@ -20,7 +20,7 @@
         .panel-ajustes { background: #2c3e50; padding: 15px; border-radius: 8px; text-align: left; flex: 1; min-width: 280px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .panel-ajustes h4 { margin: 0 0 12px 0; color: #3498db; text-transform: uppercase; font-size: 14px; border-bottom: 1px solid #34495e; padding-bottom: 5px; }
         .control-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
-        input[type="number"], select { background: #1e222b; color: white; padding: 6px; border-radius: 4px; border: 1px solid #3498db; width: 80px; text-align: center; }
+        input[type="number"], select { background: #1e222b; color: white; padding: 6px; border-radius: 4px; border: 1px solid #3498db; width: 85px; text-align: center; }
         select { width: 100%; margin-bottom: 15px; }
         .grafica-container { max-width: 1200px; margin: 15px auto; background: #2c3e50; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         #mensajeGrafica { color: #f1c40f; font-weight: bold; margin-top: 10px; display: block; }
@@ -30,8 +30,8 @@
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola de Telemetría Industrial con Amplitud de Gráfica y Alertas Variables</div>
-    <div id="bannerAlerta">⚠️ DETECTADA ANOMALÍA: VALORES OPERATIVOS FUERA DE LOS LÍMITES AJUSTADOS</div>
+    <div class="sub">Consola Industrial Tematizada con Configuración de Setpoints por Variable</div>
+    <div id="bannerAlerta">⚠️ ANOMALÍA CRÍTICA: PARÁMETROS FUERA DE LÍMITES AJUSTADOS EN CONSOLA</div>
 
     <div class="grid">
         <div class="card" id="c-temp1ra"><h3>Temp. 1ra Etapa</h3><div class="valor" id="temp1ra">-- <span class="unidad">°C</span></div></div>
@@ -44,19 +44,21 @@
 
     <div class="seccion-controles">
         <div class="panel-ajustes">
-            <h4>Ajuste de Límites Operativos (Setpoints)</h4>
-            <div class="control-group"><label>Máx. Temp 3ra Etapa (°C):</label><input type="number" id="set_temp3ra" value="140" onchange="guardarSetpoints()"></div>
-            <div class="control-group"><label>Mín. Presión Aceite (PSI):</label><input type="number" id="set_presionAceite" value="4.0" step="0.1" onchange="guardarSetpoints()"></div>
+            <h4 id="titulo_setpoint">Límite de Alerta</h4>
+            <div class="control-group">
+                <label id="label_setpoint">Valor Umbral Crítico:</label>
+                <input type="number" id="input_setpoint" value="140" step="0.1" onchange="modificarConfiguracion('alerta')">
+            </div>
         </div>
         <div class="panel-ajustes">
-            <h4>Amplitud de Gráfica (Límites Eje Y)</h4>
-            <div class="control-group"><label>Valor MÁXIMO del Eje Y:</label><input type="number" id="grafica_max" value="160" onchange="actualizarGrafica()"></div>
-            <div class="control-group"><label>Valor MÍNIMO del Eje Y:</label><input type="number" id="grafica_min" value="0" onchange="actualizarGrafica()"></div>
+            <h4>Amplitud del Gráfico (Eje Y)</h4>
+            <div class="control-group"><label>Límite Superior MÁX:</label><input type="number" id="grafica_max" value="160" onchange="modificarConfiguracion('maxY')"></div>
+            <div class="control-group"><label>Límite Inferior MÍN:</label><input type="number" id="grafica_min" value="0" onchange="modificarConfiguracion('minY')"></div>
         </div>
     </div>
 
     <div class="grafica-container">
-        <select id="parametroSeleccionado" onchange="ajustarAmplitudPorDefecto(); actualizarGrafica();">
+        <select id="parametroSeleccionado" onchange="cambiarParametroVisualizado()">
             <option value="temp3ra">Temperatura 3ra Etapa</option>
             <option value="temp1ra">Temperatura 1ra Etapa</option>
             <option value="temp2da">Temperatura 2da Etapa</option>
@@ -67,32 +69,56 @@
         <div id="mensajeGrafica">Esperando datos del ESP32...</div>
         <div style="position: relative; height:300px; width:100%"><canvas id="miGrafica"></canvas></div>
     </div>
-    <p class="actualizado">Último reporte: <span id="fecha">--</span></p>
-    <script>
+    <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
+       <script>
         let miChart = null;
 
-        if(localStorage.getItem('set_temp3ra')) {
-            document.getElementById('set_temp3ra').value = localStorage.getItem('set_temp3ra');
-            document.getElementById('set_presionAceite').value = localStorage.getItem('set_presionAceite');
+        // MAPA CONFIGURABLE POR DEFECTO PARA CADA PARÁMETRO INDUSTRIAL
+        let CONFIG_PARAMETROS = {
+            temp1ra:       { alerta: 85,  tipo: 'MAX', minY: 40,  maxY: 100 },
+            temp2da:       { alerta: 115, tipo: 'MAX', minY: 60,  maxY: 140 },
+            temp3ra:       { alerta: 140, tipo: 'MAX', minY: 80,  maxY: 170 },
+            tempAgua:      { alerta: 42,  tipo: 'MAX', minY: 10,  maxY: 60  },
+            tempAceite:    { alerta: 72,  tipo: 'MAX', minY: 30,  maxY: 90  },
+            presionAceite: { alerta: 4.0, tipo: 'MIN', minY: 0,   maxY: 10  }
+        };
+
+        // Recuperar configuraciones personalizadas previas si existen
+        if(localStorage.getItem('CONFIG_COMPRESOR_V1')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V1'));
         }
 
-        function guardarSetpoints() {
-            localStorage.setItem('set_temp3ra', document.getElementById('set_temp3ra').value);
-            localStorage.setItem('set_presionAceite', document.getElementById('set_presionAceite').value);
+        function guardarEnAlmacenamiento() {
+            localStorage.setItem('CONFIG_COMPRESOR_V1', JSON.stringify(CONFIG_PARAMETROS));
         }
 
-        function ajustarAmplitudPorDefecto() {
+        // Se ejecuta cuando el usuario cambia de parámetro en el menú desplegable
+        function cambiarParametroVisualizado() {
             const param = document.getElementById('parametroSeleccionado').value;
-            if (param === 'presionAceite') {
-                document.getElementById('grafica_max').value = 10;
-                document.getElementById('grafica_min').value = 0;
-            } else if (param === 'temp3ra' || param === 'temp2da') {
-                document.getElementById('grafica_max').value = 160;
-                document.getElementById('grafica_min').value = 40;
-            } else {
-                document.getElementById('grafica_max').value = 100;
-                document.getElementById('grafica_min').value = 10;
-            }
+            const config = CONFIG_PARAMETROS[param];
+
+            // Ajustar panel de alertas basado en si es temperatura (MAX) o presión (MIN)
+            document.getElementById('titulo_setpoint').innerText = `Setpoint Alerta - ${config.tipo === 'MAX' ? 'Alta' : 'Baja'}`;
+            document.getElementById('label_setpoint').innerText = `${config.tipo === 'MAX' ? 'Límite Máximo Permitido:' : 'Límite Mínimo Requerido:'}`;
+            document.getElementById('input_setpoint').value = config.alerta;
+
+            // Ajustar los valores en las cajas de la amplitud de gráfica
+            document.getElementById('grafica_max').value = config.maxY;
+            document.getElementById('grafica_min').value = config.minY;
+
+            actualizarGrafica();
+        }
+
+        // Se ejecuta cuando el usuario edita a mano cualquier caja numérica de la pantalla
+        function modificarConfiguracion(tipo) {
+            const param = document.getElementById('parametroSeleccionado').value;
+            
+            if (tipo === 'alerta') CONFIG_PARAMETROS[param].alerta = Number(document.getElementById('input_setpoint').value);
+            if (tipo === 'maxY') CONFIG_PARAMETROS[param].maxY = Number(document.getElementById('grafica_max').value);
+            if (tipo === 'minY') CONFIG_PARAMETROS[param].minY = Number(document.getElementById('grafica_min').value);
+            
+            guardarEnAlmacenamiento();
+            actualizarGrafica();
         }
 
         function inicializarGrafica() {
@@ -102,6 +128,8 @@
                 data: { labels: [], datasets: [{ label: 'Historial', data: [], borderColor: '#f1c40f', backgroundColor: 'rgba(241, 196, 15, 0.1)', borderWidth: 2.5, pointRadius: 2, fill: true, tension: 0.1 }] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }, y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' }, min: 0, max: 160 } }, plugins: { legend: { labels: { color: 'white' } } } }
             });
+            // Carga inicial de inputs basados en el primer parámetro activo (temp3ra)
+            cambiarParametroVisualizado();
         }
 
         function actualizarPanel() {
@@ -109,6 +137,7 @@
                 .then(res => res.json())
                 .then(data => {
                     if(!data || !data.fecha || data.fecha.includes("Esperando")) return;
+                    
                     document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
                     document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
                     document.getElementById('temp3ra').innerHTML = data.temp3ra + ' <span class="unidad">°C</span>';
@@ -117,40 +146,57 @@
                     document.getElementById('presionAceite').innerHTML = data.presionAceite + ' <span class="unidad">PSI</span>';
                     document.getElementById('fecha').innerText = data.fecha;
 
-                    const maxTemp3 = Number(document.getElementById('set_temp3ra').value);
-                    const minPresion = Number(document.getElementById('set_presionAceite').value);
-                    let alertaActiva = false;
+                    let alarmaDisparada = false;
 
-                    if(Number(data.temp3ra) > maxTemp3) { document.getElementById('c-temp3ra').style.backgroundColor = '#78281f'; alertaActiva = true; } 
-                    else { document.getElementById('c-temp3ra').style.backgroundColor = '#2c3e50'; }
+                    // MONITOREAR LAS 6 ALERTAS SIMULTÁNEAMENTE CON SUS SETPOINTS ESPECÍFICOS
+                    Object.keys(CONFIG_PARAMETROS).forEach(p => {
+                        const valorActual = Number(data[p]);
+                        const limite = CONFIG_PARAMETROS[p].alerta;
+                        const tipoAlerta = CONFIG_PARAMETROS[p].tipo;
+                        const cardElement = document.getElementById(`c-${p}`);
 
-                    if(Number(data.presionAceite) < minPresion) { document.getElementById('c-presionAceite').style.backgroundColor = '#78281f'; alertaActiva = true; } 
-                    else { document.getElementById('c-presionAceite').style.backgroundColor = '#2c3e50'; }
+                        let fueraDeRango = (tipoAlerta === 'MAX' && valorActual > limite) || (tipoAlerta === 'MIN' && valorActual < limite);
 
-                    document.getElementById('bannerAlerta').style.display = alertaActiva ? 'block' : 'none';
+                        if (fueraDeRango) {
+                            cardElement.style.backgroundColor = '#78281f'; // Color Rojo Alerta
+                            alarmaDisparada = true;
+                        } else {
+                            cardElement.style.backgroundColor = '#2c3e50'; // Color Industrial Estándar
+                        }
+                    });
+
+                    document.getElementById('bannerAlerta').style.display = alarmaDisparada ? 'block' : 'none';
                 }).catch(err => console.error(err));
         }
 
         function actualizarGrafica() {
             const parametro = document.getElementById('parametroSeleccionado').value;
             const comboTexto = document.getElementById('parametroSeleccionado').options[document.getElementById('parametroSeleccionado').selectedIndex].text;
-            const gMax = Number(document.getElementById('grafica_max').value);
-            const gMin = Number(document.getElementById('grafica_min').value);
+            
+            const conf = CONFIG_PARAMETROS[parametro];
 
             fetch('/api/historial')
                 .then(res => res.json())
                 .then(historial => {
-                    if (!historial || historial.length < 2) { document.getElementById('mensajeGrafica').style.display = 'block'; return; }
+                    if (!historial || historial.length < 2) { 
+                        document.getElementById('mensajeGrafica').style.display = 'block'; 
+                        document.getElementById('mensajeGrafica').innerText = "Recopilando muestras... (" + (historial ? historial.length : 0) + "/2 recibidas)";
+                        return; 
+                    }
                     document.getElementById('mensajeGrafica').style.display = 'none';
 
                     const etiquetasHoras = historial.map(d => d.fecha);
                     const valoresY = historial.map(d => Number(d[parametro]));
 
-                    miChart.options.scales.y.max = gMax;
-                    miChart.options.scales.y.min = gMin;
+                    // APLICACIÓN DE AMPLITUD ASIGNADA ESPECÍFICAMENTE A ESTE PARÁMETRO
+                    miChart.options.scales.y.max = conf.maxY;
+                    miChart.options.scales.y.min = conf.minY;
+
+                    // CORRECCIÓN HISTÓRICA: Se agregaron los corchetes [0] para evitar congelamientos en Chart.js
                     miChart.data.labels = etiquetasHoras;
-                    miChart.data.datasets[0].label = comboTexto; // Corrección de índice [0] aplicada con éxito
+                    miChart.data.datasets[0].label = comboTexto; 
                     miChart.data.datasets[0].data = valoresY;
+                    
                     miChart.update('none');
                 }).catch(err => console.error(err));
         }
