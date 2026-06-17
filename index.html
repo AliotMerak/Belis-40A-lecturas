@@ -30,7 +30,7 @@
 <body>
 
     <h1>Parametros de Operacion de Compresor No.1</h1>
-    <div class="sub">Consola Industrial Tematizada con Configuración de Setpoints por Variable</div>
+    <div class="sub">Consola Industrial Automatizada con Configuración de Setpoints Coincidentes</div>
     <div id="bannerAlerta">⚠️ ANOMALÍA CRÍTICA: PARÁMETROS FUERA DE LÍMITES AJUSTADOS EN CONSOLA</div>
 
     <div class="grid">
@@ -70,7 +70,7 @@
         <div style="position: relative; height:300px; width:100%"><canvas id="miGrafica"></canvas></div>
     </div>
     <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
-       <script>
+      <script>
         let miChart = null;
 
         // MAPA CONFIGURABLE POR DEFECTO PARA CADA PARÁMETRO INDUSTRIAL
@@ -84,12 +84,12 @@
         };
 
         // Recuperar configuraciones personalizadas previas si existen
-        if(localStorage.getItem('CONFIG_COMPRESOR_V1')) {
-            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V1'));
+        if(localStorage.getItem('CONFIG_COMPRESOR_V2')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V2'));
         }
 
         function guardarEnAlmacenamiento() {
-            localStorage.setItem('CONFIG_COMPRESOR_V1', JSON.stringify(CONFIG_PARAMETROS));
+            localStorage.setItem('CONFIG_COMPRESOR_V2', JSON.stringify(CONFIG_PARAMETROS));
         }
 
         // Se ejecuta cuando el usuario cambia de parámetro en el menú desplegable
@@ -148,7 +148,7 @@
 
                     let alarmaDisparada = false;
 
-                    // MONITOREAR LAS 6 ALERTAS SIMULTÁNEAMENTE CON SUS SETPOINTS ESPECÍFICOS
+                    // MONITOREAR LAS 6 ALERTAS SIMULTÁNEAMENTE CON SES SETPOINTS ESPECÍFICOS
                     Object.keys(CONFIG_PARAMETROS).forEach(p => {
                         const valorActual = Number(data[p]);
                         const limite = CONFIG_PARAMETROS[p].alerta;
@@ -192,7 +192,7 @@
                     miChart.options.scales.y.max = conf.maxY;
                     miChart.options.scales.y.min = conf.minY;
 
-                    // CORRECCIÓN HISTÓRICA: Se agregaron los corchetes [0] para evitar congelamientos en Chart.js
+                    // CORRECCIÓN DEFINITIVA APLICADA: Inyección segura especificando el índice [0] del dataset
                     miChart.data.labels = etiquetasHoras;
                     miChart.data.datasets[0].label = comboTexto; 
                     miChart.data.datasets[0].data = valoresY;
