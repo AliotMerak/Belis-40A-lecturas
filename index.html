@@ -68,40 +68,44 @@
 
         // 1. INICIALIZAR LA GRÁFICA EN BLANCO
         function inicializarGrafica() {
-            const ctx = document.getElementById('miGrafica').getContext('2d');
-            miChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Muestras',
-                        data: [],
-                        borderColor: '#f1c40f',
-                        backgroundColor: 'rgba(241, 196, 15, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 2,
-                        fill: true,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } },
-                        y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }
+            try {
+                const ctx = document.getElementById('miGrafica').getContext('2d');
+                miChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Muestras',
+                            data: [],
+                            borderColor: '#f1c40f',
+                            backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            fill: true,
+                            tension: 0.1
+                        }]
                     },
-                    plugins: { legend: { labels: { color: 'white' } } }
-                }
-            });
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } },
+                            y: { grid: { color: '#34495e' }, ticks: { color: '#bdc3c7' } }
+                        },
+                        plugins: { legend: { labels: { color: 'white' } } }
+                    }
+                });
+            } catch (e) {
+                console.error("Error inicializando Chart.js:", e);
+            }
         }
 
-        // 2. ACTUALIZAR LAS CAJAS NUMÉRICAS SUPERIORES
+        // 2. ACTUALIZAR LAS CAJAS NUMÉRICAS SUPERIORES (Proceso protegido)
         function actualizarPanel() {
             fetch('/api/datos')
                 .then(res => res.json())
                 .then(data => {
-                    if(!data || data.fecha.includes("Esperando")) return;
+                    if(!data || !data.fecha || data.fecha.includes("Esperando")) return;
 
                     document.getElementById('temp1ra').innerHTML = data.temp1ra + ' <span class="unidad">°C</span>';
                     document.getElementById('temp2da').innerHTML = data.temp2da + ' <span class="unidad">°C</span>';
@@ -127,7 +131,7 @@
                 .catch(err => console.error("Error en panel:", err));
         }
 
-        // 3. INYECTAR HISTORIAL A LA GRÁFICA CORREGIDA
+        // 3. INYECTAR HISTORIAL A LA GRÁFICA CORREGIDA (Proceso protegido)
         function actualizarGrafica() {
             const parametro = document.getElementById('parametroSeleccionado').value;
             const comboTexto = document.getElementById('parametroSeleccionado').options[document.getElementById('parametroSeleccionado').selectedIndex].text;
@@ -146,18 +150,22 @@
                     const etiquetasHoras = historial.map(d => d.fecha);
                     const valoresY = historial.map(d => Number(d[parametro]));
 
-                    // CORRECCIÓN: datasets[0] asigna las variables de forma correcta en la matriz
-                    miChart.data.labels = etiquetasHoras;
-                    miChart.data.datasets[0].label = comboTexto;
-                    miChart.data.datasets[0].data = valoresY;
-                    
-                    miChart.update(); 
+                    if (miChart && miChart.data && miChart.data.datasets && miChart.data.datasets[0]) {
+                        // SOLUCIÓN: Inyección segura con índice de arreglo [0]
+                        miChart.data.labels = etiquetasHoras;
+                        miChart.data.datasets[0].label = comboTexto;
+                        miChart.data.datasets[0].data = valoresY;
+                        miChart.update('none'); 
+                    }
                 })
                 .catch(err => console.error("Error en gráfica:", err));
         }
 
-        // Arranque inicial ordenado
+        // Arranque inicial secuencial
         inicializarGrafica();
+        actualizarPanel();
+        
+        // Intervalos de refresco independientes
         setInterval(actualizarPanel, 3000);
         setInterval(actualizarGrafica, 5000);
     </script>
