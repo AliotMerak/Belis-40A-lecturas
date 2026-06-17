@@ -5,31 +5,23 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Estructura para almacenar el último dato actual
+// Registro instantáneo actual
 let ultimosDatos = {
     temp1ra: 0, temp2da: 0, temp3ra: 0,
     tempAgua: 0, tempAceite: 0, presionAceite: 0,
     fecha: "Esperando Compresor No.1..."
 };
 
-// Historial en memoria RAM (Máximo 1440 registros = 4 horas a ritmo de 10s)
+// Historial en memoria RAM (960 muestras = 8 horas a ritmo de 30 segundos)
 let historialDatos = [];
-const MAX_HISTORIAL = 1440; 
+const MAX_HISTORIAL = 960; 
 
-// CONFIGURACIÓN DE LÍMITES PARA ALERTAS INDUSTRIALES
-const LIMITES = {
-    temp3ra: { max: 140, msg: "¡ALERTA! Alta temperatura en 3ra Etapa del Compresor No.1" },
-    presionAceite: { min: 4.0, msg: "¡ALERTA! Baja presión de aceite en Compresor No.1" }
-};
-
-// Ruta GET que recibe los datos del ESP32
 app.get('/api/enviar', (req, res) => {
     const { temp1ra, temp2da, temp3ra, tempAgua, tempAceite, presionAceite } = req.query;
     
-    // Obtener hora local de México explícitamente sin importar dónde esté el servidor
+    // Captura estricta con la hora local de México configurada en Render
     const horaActual = new Date().toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City" });
 
-    // IMPORTANTE: parseFloat() convierte el texto a número puro para Chart.js
     ultimosDatos = {
         temp1ra: parseFloat(temp1ra) || 0,
         temp2da: parseFloat(temp2da) || 0,
@@ -40,28 +32,17 @@ app.get('/api/enviar', (req, res) => {
         fecha: horaActual
     };
 
-    // Agregar al historial asegurando que sean números puros
-    historialDatos.push({ ...ultimosDatos });
+    // Almacenamiento en matriz histórica
+    historialDatos.unshift({ ...ultimosDatos }); // .unshift inserta al inicio para ver lo más nuevo primero
+    
     if (historialDatos.length > MAX_HISTORIAL) {
-        historialDatos.shift(); // Borra el más antiguo si excede las 4 horas
+        historialDatos.pop(); // Elimina el registro más antiguo (exceso de 8 horas)
     }
-
-    // Monitoreo de alertas en consola de Render
-    evaluarAlertas(ultimosDatos);
 
     res.status(200).json({ estatus: "COMPRESOR_OK" });
 });
 
-function evaluarAlertas(datos) {
-    if (datos.temp3ra > LIMITES.temp3ra.max) {
-        console.log(`[ALERTA] ${LIMITES.temp3ra.msg}: ${datos.temp3ra} °C`);
-    }
-    if (datos.presionAceite < LIMITES.presionAceite.min) {
-        console.log(`[ALERTA] ${LIMITES.presionAceite.msg}: ${datos.presionAceite} PSI`);
-    }
-}
-
-// Ruta para obtener el historial numérico completo de 4 horas
+// Ruta pública para que la web descargue las 960 filas del historial
 app.get('/api/historial', (req, res) => {
     res.json(historialDatos);
 });
@@ -75,5 +56,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor industrial corriendo en puerto ${PORT}`);
+    console.log(`Servidor de registro histórico activo en puerto ${PORT}`);
 });
