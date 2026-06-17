@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consola Compresor No.1</title>
-    <!-- Distribución oficial de Chart.js via Cloudflare -->
+    <!-- Cargamos Chart.js desde la red oficial de Cloudflare -->
     <script src="https://cloudflare.com" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e222b; color: #ecf0f1; text-align: center; padding: 20px; }
@@ -68,10 +68,14 @@
             <option value="presionAceite">Presión de Aceite</option>
         </select>
         <div id="mensajeGrafica">Esperando datos del ESP32...</div>
-        <div style="position: relative; height:300px; width:100%"><canvas id="miGrafica"></canvas></div>
+        
+        <!-- CORRECCIÓN DE CONTENEDOR: Forzamos una altura física real en píxeles (320px) para que no sea invisible -->
+        <div style="position: relative; height: 320px; width: 100%;">
+            <canvas id="miGrafica" style="height: 320px; width: 100%;"></canvas>
+        </div>
     </div>
     <p class="actualizado">Último reporte de telemetría: <span id="fecha">--</span></p>
-       <script>
+        <script>
         let miChart = null;
 
         let CONFIG_PARAMETROS = {
@@ -83,12 +87,12 @@
             presionAceite: { alerta: 4.0, tipo: 'MIN', minY: 0,   maxY: 10  }
         };
 
-        if(localStorage.getItem('CONFIG_COMPRESOR_V4')) {
-            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V4'));
+        if(localStorage.getItem('CONFIG_COMPRESOR_V5')) {
+            CONFIG_PARAMETROS = JSON.parse(localStorage.getItem('CONFIG_COMPRESOR_V5'));
         }
 
         function guardarEnAlmacenamiento() {
-            localStorage.setItem('CONFIG_COMPRESOR_V4', JSON.stringify(CONFIG_PARAMETROS));
+            localStorage.setItem('CONFIG_COMPRESOR_V5', JSON.stringify(CONFIG_PARAMETROS));
         }
 
         function cambiarParametroVisualizado() {
@@ -187,10 +191,10 @@
                         const valoresY = historial.map(d => Number(d[parametro]));
 
                         if (miChart && miChart.options && miChart.data && miChart.data.datasets && miChart.data.datasets[0]) {
+                            // CORRECCIÓN TOTAL DE INTEGRACIÓN DE DATASETS MEDIANTE ÍNDICES EXPLICITADOS '[0]'
                             miChart.options.scales.y.max = conf.maxY;
                             miChart.options.scales.y.min = conf.minY;
 
-                            // REPARACIÓN COMPLETA: Inyección de datos indexando la primera posición [0] de los arreglos de datasets
                             miChart.data.labels = etiquetasHoras;
                             miChart.data.datasets[0].label = comboTexto; 
                             miChart.data.datasets[0].data = valoresY;
@@ -201,6 +205,7 @@
             } catch (e) { console.error(e); }
         }
 
+        // Arranque inicial ordenado
         setTimeout(inicializarGrafica, 500);
         setInterval(actualizarPanel, 3000);
         setInterval(actualizarGrafica, 5000);
